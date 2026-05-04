@@ -175,6 +175,11 @@
     }
     td .input-quote { margin-left: auto; }
     .note-inline { font-size: 0.8125rem; color: var(--muted); margin-top: 0.5rem; }
+    .edit-state {
+      margin-top: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -220,8 +225,11 @@
           </div>
         </div>
         <div class="btn-row">
-          <button type="submit">新增交易</button>
+          <button type="submit" id="trade-submit">新增交易</button>
+          <button type="button" id="trade-cancel" class="secondary" style="display:none;">取消編輯</button>
         </div>
+        <input type="hidden" id="edit-id" value="" />
+        <p id="edit-state" class="edit-state" style="display:none;">編輯中</p>
       </form>
     </section>
 
@@ -361,9 +369,9 @@
         return null;
       }
 
-      function computeHoldings() {
+      function computeHoldingsFromList(list) {
         const bySymbol = new Map();
-        for (const t of sortedTransactions()) {
+        for (const t of list) {
           const sym = normalizeSymbol(t.symbol);
           if (!sym) continue;
           let row = bySymbol.get(sym);
@@ -399,6 +407,40 @@
           out.set(sym, { shares: row.shares, avgCost, totalCost: row.totalCost });
         }
         return out;
+      }
+
+      function computeHoldings() {
+        return computeHoldingsFromList(sortedTransactions());
+      }
+
+      function setEditMode(tx) {
+        const form = document.getElementById("trade-form");
+        const submitBtn = document.getElementById("trade-submit");
+        const cancelBtn = document.getElementById("trade-cancel");
+        const editId = document.getElementById("edit-id");
+        const editState = document.getElementById("edit-state");
+
+        if (!tx) {
+          editId.value = "";
+          form.reset();
+          document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+          submitBtn.textContent = "新增交易";
+          cancelBtn.style.display = "none";
+          editState.style.display = "none";
+          return;
+        }
+
+        editId.value = tx.id;
+        document.getElementById("side").value = tx.side;
+        document.getElementById("symbol").value = tx.symbol;
+        document.getElementById("quantity").value = tx.quantity;
+        document.getElementById("price").value = tx.pricePerShare;
+        document.getElementById("fees").value = tx.fees;
+        document.getElementById("date").value = tx.date;
+        document.getElementById("account").value = tx.account || "";
+        submitBtn.textContent = "更新交易";
+        cancelBtn.style.display = "inline-block";
+        editState.style.display = "block";
       }
 
       function formatMoney(n) {
@@ -598,6 +640,7 @@
               <td class="num">${formatMoney(Number(t.pricePerShare))}</td>
               <td class="num">${formatMoney(Number(t.fees) || 0)}</td>
               <td>${escapeHtml(t.account || "—")}</td>
+              <td><button type="button" class="secondary edit-transaction" data-edit-id="${escapeHtml(t.id)}">編輯</button></td>
             </tr>`;
           })
           .join("");
@@ -606,7 +649,7 @@
             <thead>
               <tr>
                 <th>日期</th><th>買賣</th><th>代號</th>
-                <th class="num">股數</th><th class="num">價格</th><th class="num">手續費</th><th>帳戶</th>
+                <th class="num">股數</th><th class="num">價格</th><th class="num">手續費</th><th>帳戶</th><th>操作</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -712,6 +755,7 @@
 
       document.getElementById("trade-form").addEventListener("submit", function (e) {
         e.preventDefault();
+        const editId = document.getElementById("edit-id").value;
         const symbol = normalizeSymbol(document.getElementById("symbol").value);
         const quantity = Number(document.getElementById("quantity").value);
         const pricePerShare = Number(document.getElementById("price").value);
@@ -719,14 +763,15 @@
         const date = document.getElementById("date").value;
         const side = document.getElementById("side").value;
         const account = document.getElementById("account").value.trim();
-        const t = { id: uid(), side, symbol, quantity, pricePerShare, fees, date, account };
+        const t = { id: editId || uid(), side, symbol, quantity, pricePerShare, fees, date, account };
         const err = validateTransaction(t);
         if (err) {
           alert(err);
           return;
         }
+        const baseList = editId ? sortedTransactions().filter((x) => x.id !== editId) : sortedTransactions();
         if (side === "sell") {
-          const held = computeHoldings().get(symbol)?.shares ?? 0;
+          const held = computeHoldingsFromList(baseList).get(symbol)?.shares ?? 0;
           if (quantity > held + 1e-9) {
             alert(
               `無法賣出 ${quantity} 股 ${symbol}：目前僅持有 ${formatShares(held)} 股（平均成本法）。`
@@ -734,16 +779,39 @@
             return;
           }
         }
-        transactions.push(t);
-        e.target.reset();
-        document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+        if (editId) {
+          const idx = transactions.findIndex((x) => x.id === editId);
+          if (idx < 0) {
+            alert("要編輯的交易已不存在。");
+            setEditMode(null);
+            return;
+          }
+          transactions[idx] = t;
+        } else {
+          transactions.push(t);
+        }
+
+        setEditMode(null);
         renderAll();
+      });
+
+      document.getElementById("trade-cancel").addEventListener("click", function () {
+        setEditMode(null);
       });
 
       ["filter-symbol", "filter-side", "filter-from", "filter-to"].forEach((id) => {
         document.getElementById(id).addEventListener("input", renderTransactions);
         document.getElementById(id).addEventListener("change", renderTransactions);
       });
+      document.getElementById("transactions-container").addEventListener("click", function (e) {
+        const btn = e.target.closest("button.edit-transaction");
+        if (!btn) return;
+        const id = btn.getAttribute("data-edit-id");
+        const tx = transactions.find((x) => x.id === id);
+        if (!tx) return;
+        setEditMode(tx);
+      });
+
       document.getElementById("filter-clear").addEventListener("click", function () {
         document.getElementById("filter-symbol").value = "";
         document.getElementById("filter-side").value = "";
@@ -833,7 +901,7 @@
         }
       });
 
-      document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+      setEditMode(null);
       renderAll();
     })();
   </script>
