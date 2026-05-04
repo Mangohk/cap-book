@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>股票交易紀錄 — 原型</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4d;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3d8bfd;
+      --buy: #34c759;
+      --sell: #ff453a;
+      --radius: 10px;
+      --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    header p {
+      margin: 0.35rem 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    section h2 {
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    input, select, textarea, button {
+      font: inherit;
+      color: var(--text);
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, monospace; font-size: 0.8rem; }
+    textarea#export-preview {
+      min-height: 16rem;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    @media (min-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    .field { flex: 1; min-width: 120px; }
+    .field-grow { flex: 2; min-width: 160px; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 0.55rem 1rem;
+      font-weight: 500;
+      background: var(--accent);
+      color: #fff;
+    }
+    button:hover { filter: brightness(1.08); }
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    button.danger { background: var(--sell); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.5rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 500; font-size: 0.75rem; letter-spacing: 0.03em; }
+    tr:last-child td { border-bottom: none; }
+    .tag-buy { color: var(--buy); font-weight: 600; }
+    .tag-sell { color: var(--sell); font-weight: 600; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .empty {
+      color: var(--muted);
+      font-size: 0.875rem;
+      padding: 1rem 0;
+    }
+    .msg {
+      margin-top: 0.5rem;
+      font-size: 0.8125rem;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+    }
+    .msg.ok { background: rgba(52, 199, 89, 0.15); color: var(--buy); }
+    .msg.err { background: rgba(255, 69, 58, 0.15); color: #ff8a80; }
+    .filters .field { min-width: 100px; }
+    .portfolio-summary {
+      display: grid;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .portfolio-summary dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.25rem 1rem;
+      align-items: baseline;
+    }
+    .portfolio-summary dt { color: var(--muted); margin: 0; }
+    .portfolio-summary dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+    .input-quote {
+      max-width: 7.5rem;
+      margin-left: auto;
+      display: block;
+    }
+    td .input-quote { margin-left: auto; }
+    .note-inline { font-size: 0.8125rem; color: var(--muted); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>股票交易紀錄</h1>
+    <p>原型應用程式：資料僅存在此頁面，請匯出以保存。若要還原上次工作階段，請使用匯入。</p>
+  </header>
+  <main>
+    <section aria-labelledby="add-title">
+      <h2 id="add-title">記錄一筆交易</h2>
+      <form id="trade-form" class="grid">
+        <div class="row">
+          <div class="field" style="max-width: 140px;">
+            <label for="side">買賣別</label>
+            <select id="side" name="side">
+              <option value="buy">買入</option>
+              <option value="sell">賣出</option>
+            </select>
+          </div>
+          <div class="field-grow">
+            <label for="symbol">股票代號</label>
+            <input id="symbol" name="symbol" type="text" placeholder="例：2330" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="quantity">股數</label>
+            <input id="quantity" name="quantity" type="number" min="0" step="any" placeholder="0" required />
+          </div>
+          <div class="field">
+            <label for="price">每股價格</label>
+            <input id="price" name="price" type="number" min="0" step="any" placeholder="0.00" required />
+          </div>
+          <div class="field">
+            <label for="fees">手續費</label>
+            <input id="fees" name="fees" type="number" min="0" step="any" placeholder="0" value="0" />
+          </div>
+          <div class="field">
+            <label for="date">日期</label>
+            <input id="date" name="date" type="date" required />
+          </div>
+          <div class="field-grow">
+            <label for="account">帳戶（選填）</label>
+            <input id="account" name="account" type="text" placeholder="例：複委託、證券戶" autocomplete="off" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit">新增交易</button>
+        </div>
+      </form>
+    </section>
+
+    <section aria-labelledby="holdings-title">
+      <h2 id="holdings-title">持股</h2>
+      <div id="holdings-container"></div>
+    </section>
+
+    <section aria-labelledby="portfolio-title">
+      <h2 id="portfolio-title">投資組合（目前價值）</h2>
+      <p style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
+        請為每檔持股輸入目前每股價格。市值與未實現損益將依您的輸入計算（非即時行情）。
+      </p>
+      <div id="portfolio-container"></div>
+    </section>
+
+    <section aria-labelledby="list-title">
+      <h2 id="list-title">交易列表</h2>
+      <form id="filter-form" class="filters row" style="margin-bottom: 1rem;">
+        <div class="field">
+          <label for="filter-symbol">代號</label>
+          <input id="filter-symbol" type="text" placeholder="全部" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="filter-side">買賣別</label>
+          <select id="filter-side">
+            <option value="">全部</option>
+            <option value="buy">買入</option>
+            <option value="sell">賣出</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filter-from">起日</label>
+          <input id="filter-from" type="date" />
+        </div>
+        <div class="field">
+          <label for="filter-to">迄日</label>
+          <input id="filter-to" type="date" />
+        </div>
+        <button type="button" class="secondary" id="filter-clear">清除篩選</button>
+      </form>
+      <div id="transactions-container"></div>
+    </section>
+
+    <section aria-labelledby="io-title">
+      <h2 id="io-title">備份與還原</h2>
+      <p style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
+        匯出會將交易紀錄與您輸入的<strong>目前股價</strong>下載為 JSON。匯入會以貼上的內容<strong>完全取代</strong>目前頁面中的資料。
+      </p>
+      <div class="btn-row" style="margin-bottom: 1rem;">
+        <button type="button" id="export-json">匯出為 JSON</button>
+        <button type="button" id="export-txt" class="secondary">匯出為 TXT</button>
+      </div>
+      <label for="import-text">將匯出的 JSON 貼在下方</label>
+      <textarea id="import-text" placeholder='{"version":2,"transactions":[...]}'></textarea>
+      <div class="btn-row">
+        <button type="button" id="import-btn">匯入（取代全部資料）</button>
+      </div>
+      <div id="io-message" aria-live="polite"></div>
+    </section>
+
+    <section aria-labelledby="export-preview-title">
+      <h2 id="export-preview-title">即時匯出（複製 JSON）</h2>
+      <p style="margin: 0 0 0.75rem; font-size: 0.875rem; color: var(--muted);">
+        內容與<strong>匯出為 JSON</strong>相同，會在您變更交易或投組股價時自動更新。可全選後複製，無須下載檔案。
+      </p>
+      <textarea id="export-preview" readonly spellcheck="false" aria-label="供複製的目前匯出 JSON"></textarea>
+      <div class="btn-row">
+        <button type="button" id="copy-export-preview" class="secondary">複製 JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const STORAGE_VERSION = 2;
+
+      /** @type {{ id: string, side: 'buy'|'sell', symbol: string, quantity: number, pricePerShare: number, fees: number, date: string, account: string }} */
+      let transactions = [];
+
+      /** User-entered last price per symbol (string from inputs; normalized keys). */
+      let currentPrices = {};
+
+      function uid() {
+        return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+      }
+
+      function normalizeSymbol(s) {
+        return String(s || "").trim().toUpperCase();
+      }
+
+      function sortedTransactions() {
+        return [...transactions].sort((a, b) => {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return a.id < b.id ? -1 : 1;
+        });
+      }
+
+      /**
+       * @param {{ id: string, side: string, symbol: string, quantity: number, pricePerShare: number, fees: number, date: string }[]} list
+       * @returns {string|null}
+       */
+      function ledgerErrorIfInvalid(list) {
+        const bySymbol = new Map();
+        const ordered = [...list].sort((a, b) => {
+          if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+          return String(a.id).localeCompare(String(b.id));
+        });
+        for (const t of ordered) {
+          const sym = normalizeSymbol(t.symbol);
+          if (!sym) continue;
+          let row = bySymbol.get(sym);
+          if (!row) {
+            row = { shares: 0, totalCost: 0 };
+            bySymbol.set(sym, row);
+          }
+          const qty = Number(t.quantity);
+          const price = Number(t.pricePerShare);
+          const fees = Number(t.fees) || 0;
+          if (!Number.isFinite(qty) || qty <= 0) continue;
+          if (t.side === "buy") {
+            row.totalCost += qty * price + fees;
+            row.shares += qty;
+          } else {
+            if (row.shares + 1e-9 < qty) {
+              return `帳務無效：${t.date} 賣出 ${qty} 股 ${sym} 超過當時持股（${formatShares(row.shares)} 股）。`;
+            }
+            const avg = row.totalCost / row.shares;
+            row.totalCost -= qty * avg;
+            row.shares -= qty;
+            if (row.shares < 1e-10) {
+              row.shares = 0;
+              row.totalCost = 0;
+            }
+          }
+        }
+        return null;
+      }
+
+      function computeHoldings() {
+        const bySymbol = new Map();
+        for (const t of sortedTransactions()) {
+          const sym = normalizeSymbol(t.symbol);
+          if (!sym) continue;
+          let row = bySymbol.get(sym);
+          if (!row) {
+            row = { shares: 0, totalCost: 0 };
+            bySymbol.set(sym, row);
+          }
+          const qty = Number(t.quantity);
+          const price = Number(t.pricePerShare);
+          const fees = Number(t.fees) || 0;
+          if (!Number.isFinite(qty) || qty <= 0) continue;
+
+          if (t.side === "buy") {
+            const addCost = qty * price + fees;
+            row.totalCost += addCost;
+            row.shares += qty;
+          } else {
+            if (row.shares <= 0) continue;
+            const avg = row.totalCost / row.shares;
+            const sellQty = Math.min(qty, row.shares);
+            row.totalCost -= sellQty * avg;
+            row.shares -= sellQty;
+            if (row.shares < 1e-10) {
+              row.shares = 0;
+              row.totalCost = 0;
+            }
+          }
+        }
+        const out = new Map();
+        for (const [sym, row] of bySymbol) {
+          if (row.shares <= 0) continue;
+          const avgCost = row.shares > 0 ? row.totalCost / row.shares : 0;
+          out.set(sym, { shares: row.shares, avgCost, totalCost: row.totalCost });
+        }
+        return out;
+      }
+
+      function formatMoney(n) {
+        if (!Number.isFinite(n)) return "—";
+        return n.toLocaleString("zh-Hant", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+      }
+
+      function formatShares(n) {
+        if (!Number.isFinite(n)) return "—";
+        return n.toLocaleString("zh-Hant", { maximumFractionDigits: 6 });
+      }
+
+      function parseQuoteForSymbol(sym) {
+        const raw = currentPrices[sym];
+        if (raw == null) return NaN;
+        const s = String(raw).trim();
+        if (s === "") return NaN;
+        const n = Number(s);
+        return Number.isFinite(n) && n >= 0 ? n : NaN;
+      }
+
+      function renderPortfolio() {
+        const el = document.getElementById("portfolio-container");
+        const active = document.activeElement;
+        let refSym = null;
+        let refSelStart = 0;
+        let refSelEnd = 0;
+        if (active && active.matches && active.matches("input[data-quote-symbol]")) {
+          refSym = active.getAttribute("data-quote-symbol");
+          refSelStart = active.selectionStart;
+          refSelEnd = active.selectionEnd;
+        }
+
+        const holdings = computeHoldings();
+        if (holdings.size === 0) {
+          el.innerHTML =
+            '<p class="empty">目前無持股。請新增買入交易以估算投資組合價值。</p>';
+          return;
+        }
+
+        let totalCostAll = 0;
+        let totalMarketPriced = 0;
+        let totalCostPriced = 0;
+        let missingPrice = 0;
+        let pricedCount = 0;
+
+        const rows = [...holdings.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([sym, h]) => {
+            totalCostAll += h.totalCost;
+            const quote = parseQuoteForSymbol(sym);
+            const hasPrice = Number.isFinite(quote);
+            if (!hasPrice) missingPrice += 1;
+            else pricedCount += 1;
+
+            const market = hasPrice ? h.shares * quote : NaN;
+            if (hasPrice) {
+              totalMarketPriced += market;
+              totalCostPriced += h.totalCost;
+            }
+            const unreal = hasPrice ? market - h.totalCost : NaN;
+            const unrealClass =
+              !Number.isFinite(unreal) ? "" : unreal >= 0 ? "tag-buy" : "tag-sell";
+
+            const priceVal =
+              currentPrices[sym] != null && String(currentPrices[sym]).length > 0
+                ? escapeHtml(String(currentPrices[sym]))
+                : "";
+
+            return `<tr>
+              <td><strong>${escapeHtml(sym)}</strong></td>
+              <td class="num">${formatShares(h.shares)}</td>
+              <td class="num">${formatMoney(h.avgCost)}</td>
+              <td class="num">${formatMoney(h.totalCost)}</td>
+              <td class="num">
+                <input class="input-quote" type="text" inputmode="decimal" data-quote-symbol="${escapeHtml(sym)}" placeholder="股價" value="${priceVal}" aria-label="${escapeHtml(sym)} 目前股價" />
+              </td>
+              <td class="num">${hasPrice ? formatMoney(market) : "—"}</td>
+              <td class="num"><span class="${unrealClass}">${hasPrice ? formatMoney(unreal) : "—"}</span></td>
+            </tr>`;
+          })
+          .join("");
+
+        const unrealTotal = totalMarketPriced - totalCostPriced;
+        const unrealTotalClass =
+          pricedCount === 0 ? "" : unrealTotal >= 0 ? "tag-buy" : "tag-sell";
+
+        const note =
+          missingPrice > 0
+            ? `<p class="note-inline">有 ${missingPrice} 檔持股尚未輸入股價；上方市值與未實現損益合計僅包含<strong>已輸入股價</strong>的列。</p>`
+            : "";
+
+        el.innerHTML = `
+          <div class="portfolio-summary">
+            <dl>
+              <dt>成本基礎（全部持股）</dt>
+              <dd>${formatMoney(totalCostAll)}</dd>
+              <dt>市值（已輸入股價者）</dt>
+              <dd>${pricedCount > 0 ? formatMoney(totalMarketPriced) : "—"}</dd>
+              <dt>未實現損益（已輸入股價者）</dt>
+              <dd><span class="${unrealTotalClass}">${pricedCount > 0 ? formatMoney(unrealTotal) : "—"}</span></dd>
+            </dl>
+            ${note}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>代號</th>
+                <th class="num">股數</th>
+                <th class="num">平均成本</th>
+                <th class="num">成本基礎</th>
+                <th class="num">目前股價</th>
+                <th class="num">市值</th>
+                <th class="num">未實現損益</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+
+        if (refSym) {
+          const next = el.querySelector('input[data-quote-symbol="' + refSym.replace(/"/g, "") + '"]');
+          if (next) {
+            next.focus();
+            try {
+              if (typeof refSelStart === "number" && typeof refSelEnd === "number") {
+                next.setSelectionRange(refSelStart, refSelEnd);
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      function renderHoldings() {
+        const el = document.getElementById("holdings-container");
+        const holdings = computeHoldings();
+        if (holdings.size === 0) {
+          el.innerHTML = '<p class="empty">目前無持股。請新增買入交易以檢視持股。</p>';
+          return;
+        }
+        const rows = [...holdings.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(
+            ([sym, h]) =>
+              `<tr><td><strong>${escapeHtml(sym)}</strong></td><td class="num">${formatShares(h.shares)}</td><td class="num">${formatMoney(h.avgCost)}</td><td class="num">${formatMoney(h.totalCost)}</td></tr>`
+          )
+          .join("");
+        el.innerHTML = `
+          <table>
+            <thead><tr><th>代號</th><th class="num">股數</th><th class="num">平均成本</th><th class="num">成本基礎</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+
+      function escapeHtml(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function getFilters() {
+        return {
+          symbol: normalizeSymbol(document.getElementById("filter-symbol").value),
+          side: document.getElementById("filter-side").value,
+          from: document.getElementById("filter-from").value,
+          to: document.getElementById("filter-to").value,
+        };
+      }
+
+      function filterList(list) {
+        const f = getFilters();
+        return list.filter((t) => {
+          if (f.symbol && normalizeSymbol(t.symbol) !== f.symbol) return false;
+          if (f.side && t.side !== f.side) return false;
+          if (f.from && t.date < f.from) return false;
+          if (f.to && t.date > f.to) return false;
+          return true;
+        });
+      }
+
+      function renderTransactions() {
+        const el = document.getElementById("transactions-container");
+        const list = filterList(sortedTransactions());
+        if (list.length === 0) {
+          el.innerHTML =
+            '<p class="empty">沒有符合篩選條件的交易，或尚無任何交易。</p>';
+          return;
+        }
+        const rows = list
+          .map((t) => {
+            const sideClass = t.side === "buy" ? "tag-buy" : "tag-sell";
+            const sideLabel = t.side === "buy" ? "買入" : "賣出";
+            return `<tr>
+              <td>${escapeHtml(t.date)}</td>
+              <td><span class="${sideClass}">${sideLabel}</span></td>
+              <td><strong>${escapeHtml(normalizeSymbol(t.symbol))}</strong></td>
+              <td class="num">${formatShares(Number(t.quantity))}</td>
+              <td class="num">${formatMoney(Number(t.pricePerShare))}</td>
+              <td class="num">${formatMoney(Number(t.fees) || 0)}</td>
+              <td>${escapeHtml(t.account || "—")}</td>
+            </tr>`;
+          })
+          .join("");
+        el.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th><th>買賣</th><th>代號</th>
+                <th class="num">股數</th><th class="num">價格</th><th class="num">手續費</th><th>帳戶</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+
+      function renderAll() {
+        pruneQuotesForHoldings();
+        renderHoldings();
+        renderPortfolio();
+        renderTransactions();
+        refreshExportPreview();
+      }
+
+      /** Drop stored prices for symbols you no longer hold (keeps export tidy). */
+      function pruneQuotesForHoldings() {
+        const held = computeHoldings();
+        for (const k of Object.keys(currentPrices)) {
+          const sym = normalizeSymbol(k);
+          if (!held.has(sym)) delete currentPrices[sym];
+        }
+      }
+
+      function serializeApp() {
+        const pricesOut = {};
+        for (const sym of Object.keys(currentPrices)) {
+          const n = normalizeSymbol(sym);
+          if (!n) continue;
+          const v = currentPrices[sym];
+          if (v != null && String(v).trim() !== "") pricesOut[n] = v;
+        }
+        return {
+          version: STORAGE_VERSION,
+          transactions: sortedTransactions(),
+          currentPrices: pricesOut,
+        };
+      }
+
+      function downloadBlob(filename, text, mime) {
+        const blob = new Blob([text], { type: mime });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      function showIoMessage(text, ok) {
+        const box = document.getElementById("io-message");
+        box.innerHTML = text
+          ? `<div class="msg ${ok ? "ok" : "err"}">${escapeHtml(text)}</div>`
+          : "";
+      }
+
+      function validateTransaction(t) {
+        if (!t || typeof t !== "object") return "無效的交易物件";
+        if (t.side !== "buy" && t.side !== "sell") return "買賣別須為 buy（買入）或 sell（賣出）";
+        if (!normalizeSymbol(t.symbol)) return "必須填寫股票代號";
+        const q = Number(t.quantity);
+        if (!Number.isFinite(q) || q <= 0) return "股數必須為正數";
+        const p = Number(t.pricePerShare);
+        if (!Number.isFinite(p) || p < 0) return "每股價格須為非負數";
+        const fees = Number(t.fees);
+        if (t.fees != null && (!Number.isFinite(fees) || fees < 0)) return "手續費須為非負數";
+        if (typeof t.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return "日期須為 YYYY-MM-DD 格式";
+        return null;
+      }
+
+      function importPayload(data) {
+        if (!data || typeof data !== "object") throw new Error("根節點必須為 JSON 物件。");
+        const txs = data.transactions;
+        if (!Array.isArray(txs)) throw new Error('缺少 "transactions" 陣列。');
+        const next = [];
+        for (let i = 0; i < txs.length; i++) {
+          const err = validateTransaction(txs[i]);
+          if (err) throw new Error(`第 ${i + 1} 筆交易：${err}`);
+          next.push({
+            id: typeof txs[i].id === "string" ? txs[i].id : uid(),
+            side: txs[i].side,
+            symbol: normalizeSymbol(txs[i].symbol),
+            quantity: Number(txs[i].quantity),
+            pricePerShare: Number(txs[i].pricePerShare),
+            fees: Number(txs[i].fees) || 0,
+            date: txs[i].date,
+            account: txs[i].account != null ? String(txs[i].account) : "",
+          });
+        }
+        const seqErr = ledgerErrorIfInvalid(next);
+        if (seqErr) throw new Error(seqErr);
+        transactions = next;
+        if (data.currentPrices && typeof data.currentPrices === "object") {
+          currentPrices = {};
+          for (const [k, v] of Object.entries(data.currentPrices)) {
+            const sym = normalizeSymbol(k);
+            if (!sym) continue;
+            if (v != null && String(v).trim() !== "") currentPrices[sym] = String(v).trim();
+          }
+        } else {
+          currentPrices = {};
+        }
+        renderAll();
+      }
+
+      document.getElementById("trade-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        const symbol = normalizeSymbol(document.getElementById("symbol").value);
+        const quantity = Number(document.getElementById("quantity").value);
+        const pricePerShare = Number(document.getElementById("price").value);
+        const fees = Number(document.getElementById("fees").value) || 0;
+        const date = document.getElementById("date").value;
+        const side = document.getElementById("side").value;
+        const account = document.getElementById("account").value.trim();
+        const t = { id: uid(), side, symbol, quantity, pricePerShare, fees, date, account };
+        const err = validateTransaction(t);
+        if (err) {
+          alert(err);
+          return;
+        }
+        if (side === "sell") {
+          const held = computeHoldings().get(symbol)?.shares ?? 0;
+          if (quantity > held + 1e-9) {
+            alert(
+              `無法賣出 ${quantity} 股 ${symbol}：目前僅持有 ${formatShares(held)} 股（平均成本法）。`
+            );
+            return;
+          }
+        }
+        transactions.push(t);
+        e.target.reset();
+        document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+        renderAll();
+      });
+
+      ["filter-symbol", "filter-side", "filter-from", "filter-to"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", renderTransactions);
+        document.getElementById(id).addEventListener("change", renderTransactions);
+      });
+      document.getElementById("filter-clear").addEventListener("click", function () {
+        document.getElementById("filter-symbol").value = "";
+        document.getElementById("filter-side").value = "";
+        document.getElementById("filter-from").value = "";
+        document.getElementById("filter-to").value = "";
+        renderTransactions();
+      });
+
+      document.getElementById("portfolio-container").addEventListener("input", function (e) {
+        const inp = e.target.closest("input[data-quote-symbol]");
+        if (!inp) return;
+        const sym = normalizeSymbol(inp.getAttribute("data-quote-symbol"));
+        const raw = inp.value.trim();
+        if (raw === "") delete currentPrices[sym];
+        else currentPrices[sym] = inp.value;
+        renderPortfolio();
+        refreshExportPreview();
+      });
+
+      function exportText() {
+        return JSON.stringify(serializeApp(), null, 2);
+      }
+
+      function refreshExportPreview() {
+        const ta = document.getElementById("export-preview");
+        if (!ta) return;
+        ta.value = exportText();
+      }
+
+      async function copyExportPreviewToClipboard() {
+        const ta = document.getElementById("export-preview");
+        if (!ta) return;
+        const text = ta.value || "";
+        if (!text) {
+          showIoMessage("複製失敗，請手動全選後複製。", false);
+          return;
+        }
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            ta.focus();
+            ta.select();
+            const ok = document.execCommand("copy");
+            if (!ok) throw new Error("copy failed");
+          }
+          showIoMessage("已將 JSON 複製到剪貼簿。", true);
+        } catch (_) {
+          ta.focus();
+          ta.select();
+          showIoMessage("複製失敗，請手動全選後複製。", false);
+        }
+      }
+
+      document.getElementById("export-json").addEventListener("click", function () {
+        const text = exportText();
+        const stamp = new Date().toISOString().slice(0, 10);
+        downloadBlob(`stock-transactions-${stamp}.json`, text, "application/json;charset=utf-8");
+        showIoMessage("已下載匯出檔案。", true);
+      });
+
+      document.getElementById("copy-export-preview").addEventListener("click", function () {
+        copyExportPreviewToClipboard();
+      });
+
+      document.getElementById("export-txt").addEventListener("click", function () {
+        const text = exportText();
+        const stamp = new Date().toISOString().slice(0, 10);
+        downloadBlob(`stock-transactions-${stamp}.txt`, text, "text/plain;charset=utf-8");
+        showIoMessage("已下載為 .txt（內容與 JSON 相同）。", true);
+      });
+
+      document.getElementById("import-btn").addEventListener("click", function () {
+        const raw = document.getElementById("import-text").value.trim();
+        showIoMessage("");
+        if (!raw) {
+          showIoMessage("請先貼上 JSON。", false);
+          return;
+        }
+        if (!confirm("確定要以匯入資料取代目前所有交易與股價資料？")) return;
+        try {
+          const data = JSON.parse(raw);
+          importPayload(data);
+          showIoMessage(`已匯入 ${transactions.length} 筆交易。`, true);
+        } catch (err) {
+          showIoMessage(err.message || String(err), false);
+        }
+      });
+
+      document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
