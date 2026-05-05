@@ -181,15 +181,54 @@
       font-size: 0.8125rem;
       color: var(--accent);
     }
+
+    .tabs-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .tab-panel {
+      display: none;
+      gap: 1.5rem;
+    }
+    .tab-panel.active {
+      display: grid;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Stock transactions</h1>
-    <p>Prototype — data lives in this page until you export it. Use import to restore a previous session.</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
+      <div>
+        <h1 id="header-title">Stock transactions</h1>
+        <p id="header-subtitle">Prototype — data lives in this page until you export it. Use import to restore a previous session.</p>
+      </div>
+      <button type="button" id="lang-toggle" class="secondary" title="Switch language" aria-label="Switch language" style="padding:0.45rem 0.7rem;line-height:1;">🌐</button>
+    </div>
   </header>
   <main>
-    <section aria-labelledby="add-title">
+    <nav class="tabs-nav" aria-label="Page sections">
+      <button type="button" class="tab-btn active" data-tab-btn="trades" aria-selected="true">Record a trade / Transaction list</button>
+      <button type="button" class="tab-btn" data-tab-btn="positions" aria-selected="false">Holdings / Portfolio</button>
+      <button type="button" class="tab-btn" data-tab-btn="data" aria-selected="false">Backup and restore / Live report</button>
+    </nav>
+
+    <div class="tab-panel active" data-tab-panel="trades">
+          <section aria-labelledby="add-title">
       <h2 id="add-title">Record a trade</h2>
       <form id="trade-form" class="grid">
         <div class="row">
@@ -234,20 +273,7 @@
       </form>
     </section>
 
-    <section aria-labelledby="holdings-title">
-      <h2 id="holdings-title">Holdings</h2>
-      <div id="holdings-container"></div>
-    </section>
-
-    <section aria-labelledby="portfolio-title">
-      <h2 id="portfolio-title">Portfolio (current value)</h2>
-      <p style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
-        Enter today’s price per share for each holding. Market value and unrealized P&amp;L update from your inputs (not live quotes).
-      </p>
-      <div id="portfolio-container"></div>
-    </section>
-
-    <section aria-labelledby="list-title">
+          <section aria-labelledby="list-title">
       <h2 id="list-title">Transaction list</h2>
       <form id="filter-form" class="filters row" style="margin-bottom: 1rem;">
         <div class="field">
@@ -274,10 +300,27 @@
       </form>
       <div id="transactions-container"></div>
     </section>
+    </div>
 
-    <section aria-labelledby="io-title">
+    <div class="tab-panel" data-tab-panel="positions">
+          <section aria-labelledby="holdings-title">
+      <h2 id="holdings-title">Holdings</h2>
+      <div id="holdings-container"></div>
+    </section>
+
+          <section aria-labelledby="portfolio-title">
+      <h2 id="portfolio-title">Portfolio (current value)</h2>
+      <p id="portfolio-help" style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
+        Enter today’s price per share for each holding. Market value and unrealized P&amp;L update from your inputs (not live quotes).
+      </p>
+      <div id="portfolio-container"></div>
+    </section>
+    </div>
+
+    <div class="tab-panel" data-tab-panel="data">
+          <section aria-labelledby="io-title">
       <h2 id="io-title">Backup &amp; restore</h2>
-      <p style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
+      <p id="io-help" style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
         Export downloads transactions and your entered <strong>current prices</strong> as JSON. Import replaces all in-memory data with the pasted file contents.
       </p>
       <div class="btn-row" style="margin-bottom: 1rem;">
@@ -292,9 +335,9 @@
       <div id="io-message" aria-live="polite"></div>
     </section>
 
-    <section aria-labelledby="export-preview-title">
-      <h2 id="export-preview-title">Live export (copy JSON)</h2>
-      <p style="margin: 0 0 0.75rem; font-size: 0.875rem; color: var(--muted);">
+          <section aria-labelledby="export-preview-title">
+      <h2 id="export-preview-title">Live report (copy JSON)</h2>
+      <p id="export-help" style="margin: 0 0 0.75rem; font-size: 0.875rem; color: var(--muted);">
         Same data as <strong>Export as JSON</strong> — updates when you change trades or portfolio prices. Select all and copy to save without downloading a file.
       </p>
       <textarea id="export-preview" readonly spellcheck="false" aria-label="Current export JSON for copying"></textarea>
@@ -302,6 +345,7 @@
         <button type="button" id="copy-export-preview" class="secondary">Copy JSON</button>
       </div>
     </section>
+    </div>
   </main>
 
   <script>
@@ -313,6 +357,124 @@
 
       /** User-entered last price per symbol (string from inputs; normalized keys). */
       let currentPrices = {};
+
+
+      let currentLang = "en";
+      const LOCALES = {
+        en: {
+          title: "Stock transactions", subtitle: "Prototype — data lives in this page until you export it. Use import to restore a previous session.",
+          tabTrades: "Record a trade / Transaction list", tabPositions: "Holdings / Portfolio", tabData: "Backup and restore / Live report",
+          addTitle: "Record a trade", listTitle: "Transaction list", holdingsTitle: "Holdings", portfolioTitle: "Portfolio (current value)",
+          ioTitle: "Backup & restore", reportTitle: "Live report (copy JSON)",
+          side: "Side", buy: "Buy", sell: "Sell", symbol: "Symbol", qty: "Quantity", pps: "Price / share", fees: "Fees", date: "Date", account: "Account (optional)",
+          addBtn: "Add transaction", updateBtn: "Update transaction", cancelEdit: "Cancel edit", editing: "Editing transaction",
+          filterSymbol: "Symbol", filterSide: "Side", from: "From", to: "To", all: "All", clear: "Clear filters",
+          portfolioHelp: "Enter today’s price per share for each holding. Market value and unrealized P&L update from your inputs (not live quotes).",
+          ioHelp: "Export downloads transactions and your entered <strong>current prices</strong> as JSON. Import replaces all in-memory data with the pasted file contents.",
+          exportJson: "Export as JSON", exportTxt: "Export as TXT", importLabel: "Paste exported JSON here", importBtn: "Import (replace all data)",
+          reportHelp: "Same data as <strong>Export as JSON</strong> — updates when you change trades or portfolio prices. Select all and copy to save without downloading a file.",
+          copyJson: "Copy JSON", switchLang: "Switch language",
+          phSymbol: "e.g. AAPL", phPrice: "Price", phAll: "All", phImport: '{"version":2,"transactions":[...]}', phAccount: "e.g. IRA",
+          emptyPositionsValue: "No open positions. Add buy trades to value your portfolio.",
+          emptyPositions: "No open positions. Add buy trades to see holdings.",
+          emptyTx: "No transactions match the filters (or the list is empty).",
+          noteMissing: "position(s) have no price — market value and unrealized P&L totals include <strong>priced</strong> lines only.",
+          costAll: "Cost basis (all positions)", marketPriced: "Market value (priced positions)", unrealPriced: "Unrealized P&L (priced positions)",
+          thSymbol: "Symbol", thShares: "Shares", thAvg: "Avg cost", thCost: "Cost basis", thCur: "Current price", thMarket: "Market value", thUnreal: "Unrealized P&L",
+          thDate: "Date", thSide: "Side", thQty: "Qty", thPrice: "Price", thFees: "Fees", thAccount: "Account", thActions: "Actions", edit: "Edit",
+          errInvalid: "Invalid transaction object", errSide: "side must be buy or sell", errSymbol: "symbol required", errQty: "quantity must be a positive number", errPps: "pricePerShare must be a non-negative number", errFees: "fees must be non-negative", errDate: "date must be YYYY-MM-DD",
+          errRoot: "Root must be a JSON object.", errTxArray: 'Missing "transactions" array.', errTxPrefix: "Transaction",
+          errSellLedger: "Invalid ledger: sell of", errSellLedger2: "exceeds open position",
+          errCannotSell: "Cannot sell", errOnlyHeld: "only", errHeldSuffix: "shares are held (average-cost view).",
+          errEditGone: "The transaction being edited no longer exists.",
+          msgCopyFail: "Copy failed. Please select the text and copy manually.", msgCopied: "Copied JSON to clipboard.",
+          msgExport: "Export downloaded.", msgExportTxt: "Export downloaded as .txt (same JSON content).", msgPasteFirst: "Paste JSON first.",
+          confirmReplace: "Replace all current transactions with imported data?", msgImported: "Imported"
+        },
+        zh: {
+          title: "股票交易紀錄", subtitle: "原型應用程式：資料僅存在此頁面，請匯出以保存。若要還原上次工作階段，請使用匯入。",
+          tabTrades: "記錄交易 / 交易列表", tabPositions: "持股 / 投資組合", tabData: "備份與還原 / 即時報表",
+          addTitle: "記錄一筆交易", listTitle: "交易列表", holdingsTitle: "持股", portfolioTitle: "投資組合（目前價值）",
+          ioTitle: "備份與還原", reportTitle: "即時報表（複製 JSON）",
+          side: "買賣別", buy: "買入", sell: "賣出", symbol: "股票代號", qty: "股數", pps: "每股價格", fees: "手續費", date: "日期", account: "帳戶（選填）",
+          addBtn: "新增交易", updateBtn: "更新交易", cancelEdit: "取消編輯", editing: "編輯中",
+          filterSymbol: "代號", filterSide: "買賣別", from: "起日", to: "迄日", all: "全部", clear: "清除篩選",
+          portfolioHelp: "請為每檔持股輸入目前每股價格。市值與未實現損益將依您的輸入計算（非即時行情）。",
+          ioHelp: "匯出會將交易紀錄與您輸入的<strong>目前股價</strong>下載為 JSON。匯入會以貼上的內容<strong>完全取代</strong>目前頁面中的資料。",
+          exportJson: "匯出為 JSON", exportTxt: "匯出為 TXT", importLabel: "將匯出的 JSON 貼在下方", importBtn: "匯入（取代全部資料）",
+          reportHelp: "內容與<strong>匯出為 JSON</strong>相同，會在您變更交易或投組股價時自動更新。可全選後複製，無須下載檔案。",
+          copyJson: "複製 JSON", switchLang: "切換語言",
+          phSymbol: "例：2330", phPrice: "股價", phAll: "全部", phImport: '{"version":2,"transactions":[...]}', phAccount: "例：複委託、證券戶",
+          emptyPositionsValue: "目前無持股。請新增買入交易以估算投資組合價值。",
+          emptyPositions: "目前無持股。請新增買入交易以檢視持股。",
+          emptyTx: "沒有符合篩選條件的交易，或尚無任何交易。",
+          noteMissing: "檔持股尚未輸入股價；上方市值與未實現損益合計僅包含<strong>已輸入股價</strong>的列。",
+          costAll: "成本基礎（全部持股）", marketPriced: "市值（已輸入股價者）", unrealPriced: "未實現損益（已輸入股價者）",
+          thSymbol: "代號", thShares: "股數", thAvg: "平均成本", thCost: "成本基礎", thCur: "目前股價", thMarket: "市值", thUnreal: "未實現損益",
+          thDate: "日期", thSide: "買賣", thQty: "股數", thPrice: "價格", thFees: "手續費", thAccount: "帳戶", thActions: "操作", edit: "編輯",
+          errInvalid: "無效的交易物件", errSide: "買賣別須為 buy（買入）或 sell（賣出）", errSymbol: "必須填寫股票代號", errQty: "股數必須為正數", errPps: "每股價格須為非負數", errFees: "手續費須為非負數", errDate: "日期須為 YYYY-MM-DD 格式",
+          errRoot: "根節點必須為 JSON 物件。", errTxArray: '缺少 "transactions" 陣列。', errTxPrefix: "第",
+          errSellLedger: "帳務無效：", errSellLedger2: "超過當時持股",
+          errCannotSell: "無法賣出", errOnlyHeld: "目前僅持有", errHeldSuffix: "股（平均成本法）。",
+          errEditGone: "要編輯的交易已不存在。",
+          msgCopyFail: "複製失敗，請手動全選後複製。", msgCopied: "已將 JSON 複製到剪貼簿。",
+          msgExport: "已下載匯出檔案。", msgExportTxt: "已下載為 .txt（內容與 JSON 相同）。", msgPasteFirst: "請先貼上 JSON。",
+          confirmReplace: "確定要以匯入資料取代目前所有交易與股價資料？", msgImported: "已匯入"
+        }
+      };
+      function tr(k){ return (LOCALES[currentLang] && LOCALES[currentLang][k]) || k; }
+
+      function applyLanguage() {
+        document.documentElement.lang = currentLang === "zh" ? "zh-Hant" : "en";
+        document.title = currentLang === "zh" ? "股票交易紀錄 — 原型" : "Stock Transactions — Prototype";
+        document.getElementById("header-title").textContent = tr("title");
+        document.getElementById("header-subtitle").textContent = tr("subtitle");
+        document.getElementById("lang-toggle").title = tr("switchLang");
+        document.getElementById("lang-toggle").setAttribute("aria-label", tr("switchLang"));
+        document.querySelector('[data-tab-btn="trades"]').textContent = tr("tabTrades");
+        document.querySelector('[data-tab-btn="positions"]').textContent = tr("tabPositions");
+        document.querySelector('[data-tab-btn="data"]').textContent = tr("tabData");
+        document.getElementById("add-title").textContent = tr("addTitle");
+        document.getElementById("list-title").textContent = tr("listTitle");
+        document.getElementById("holdings-title").textContent = tr("holdingsTitle");
+        document.getElementById("portfolio-title").textContent = tr("portfolioTitle");
+        document.getElementById("io-title").textContent = tr("ioTitle");
+        document.getElementById("export-preview-title").textContent = tr("reportTitle");
+        document.getElementById("portfolio-help").textContent = tr("portfolioHelp");
+        document.getElementById("io-help").innerHTML = tr("ioHelp");
+        document.getElementById("export-help").innerHTML = tr("reportHelp");
+        document.querySelector('label[for="side"]').textContent = tr("side");
+        document.querySelector('label[for="symbol"]').textContent = tr("symbol");
+        document.querySelector('label[for="quantity"]').textContent = tr("qty");
+        document.querySelector('label[for="price"]').textContent = tr("pps");
+        document.querySelector('label[for="fees"]').textContent = tr("fees");
+        document.querySelector('label[for="date"]').textContent = tr("date");
+        document.querySelector('label[for="account"]').textContent = tr("account");
+        document.querySelector('#side option[value="buy"]').textContent = tr("buy");
+        document.querySelector('#side option[value="sell"]').textContent = tr("sell");
+        document.getElementById("symbol").placeholder = tr("phSymbol");
+        document.getElementById("account").placeholder = tr("phAccount");
+        document.querySelector('label[for="filter-symbol"]').textContent = tr("filterSymbol");
+        document.querySelector('label[for="filter-side"]').textContent = tr("filterSide");
+        document.querySelector('label[for="filter-from"]').textContent = tr("from");
+        document.querySelector('label[for="filter-to"]').textContent = tr("to");
+        document.getElementById("filter-symbol").placeholder = tr("phAll");
+        document.querySelector('#filter-side option[value=""]').textContent = tr("all");
+        document.querySelector('#filter-side option[value="buy"]').textContent = tr("buy");
+        document.querySelector('#filter-side option[value="sell"]').textContent = tr("sell");
+        document.getElementById("filter-clear").textContent = tr("clear");
+        document.getElementById("export-json").textContent = tr("exportJson");
+        document.getElementById("export-txt").textContent = tr("exportTxt");
+        document.querySelector('label[for="import-text"]').textContent = tr("importLabel");
+        document.getElementById("import-text").placeholder = tr("phImport");
+        document.getElementById("import-btn").textContent = tr("importBtn");
+        document.getElementById("copy-export-preview").textContent = tr("copyJson");
+        document.getElementById("export-preview").setAttribute("aria-label", tr("reportTitle"));
+        document.getElementById("edit-state").textContent = tr("editing");
+        const editId = document.getElementById("edit-id").value;
+        document.getElementById("trade-submit").textContent = editId ? tr("updateBtn") : tr("addBtn");
+        document.getElementById("trade-cancel").textContent = tr("cancelEdit");
+      }
 
       function uid() {
         return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
@@ -356,7 +518,7 @@
             row.shares += qty;
           } else {
             if (row.shares + 1e-9 < qty) {
-              return `Invalid ledger: sell of ${qty} ${sym} on ${t.date} exceeds open position (${formatShares(row.shares)}).`;
+              return currentLang === "zh" ? `帳務無效：${t.date} 賣出 ${qty} 股 ${sym} 超過當時持股（${formatShares(row.shares)} 股）。` : `Invalid ledger: sell of ${qty} ${sym} on ${t.date} exceeds open position (${formatShares(row.shares)}).`;
             }
             const avg = row.totalCost / row.shares;
             row.totalCost -= qty * avg;
@@ -425,7 +587,7 @@
           editId.value = "";
           form.reset();
           document.getElementById("date").value = new Date().toISOString().slice(0, 10);
-          submitBtn.textContent = 'Add transaction';
+          submitBtn.textContent = tr("addBtn");
           cancelBtn.style.display = "none";
           editState.style.display = "none";
           return;
@@ -439,19 +601,19 @@
         document.getElementById("fees").value = tx.fees;
         document.getElementById("date").value = tx.date;
         document.getElementById("account").value = tx.account || "";
-        submitBtn.textContent = 'Update transaction';
+        submitBtn.textContent = tr("updateBtn");
         cancelBtn.style.display = "inline-block";
         editState.style.display = "block";
       }
 
       function formatMoney(n) {
         if (!Number.isFinite(n)) return "—";
-        return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        return n.toLocaleString(currentLang === "zh" ? "zh-Hant" : undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
       }
 
       function formatShares(n) {
         if (!Number.isFinite(n)) return "—";
-        return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
+        return n.toLocaleString(currentLang === "zh" ? "zh-Hant" : undefined, { maximumFractionDigits: 6 });
       }
 
       function parseQuoteForSymbol(sym) {
@@ -478,7 +640,7 @@
         const holdings = computeHoldings();
         if (holdings.size === 0) {
           el.innerHTML =
-            '<p class="empty">No open positions. Add buy trades to value your portfolio.</p>';
+            `<p class="empty">${tr("emptyPositionsValue")}</p>`;
           return;
         }
 
@@ -517,7 +679,7 @@
               <td class="num">${formatMoney(h.avgCost)}</td>
               <td class="num">${formatMoney(h.totalCost)}</td>
               <td class="num">
-                <input class="input-quote" type="text" inputmode="decimal" data-quote-symbol="${escapeHtml(sym)}" placeholder="Price" value="${priceVal}" aria-label="Current price ${escapeHtml(sym)}" />
+                <input class="input-quote" type="text" inputmode="decimal" data-quote-symbol="${escapeHtml(sym)}" placeholder="${tr("phPrice")}" value="${priceVal}" aria-label="${tr("thCur")} ${escapeHtml(sym)}" />
               </td>
               <td class="num">${hasPrice ? formatMoney(market) : "—"}</td>
               <td class="num"><span class="${unrealClass}">${hasPrice ? formatMoney(unreal) : "—"}</span></td>
@@ -531,17 +693,17 @@
 
         const note =
           missingPrice > 0
-            ? `<p class="note-inline">${missingPrice} position(s) have no price — market value and unrealized P&amp;L totals include <strong>priced</strong> lines only.</p>`
+            ? `<p class="note-inline">${missingPrice} ${tr("noteMissing")}</p>`
             : "";
 
         el.innerHTML = `
           <div class="portfolio-summary">
             <dl>
-              <dt>Cost basis (all positions)</dt>
+              <dt>${tr("costAll")}</dt>
               <dd>${formatMoney(totalCostAll)}</dd>
-              <dt>Market value (priced positions)</dt>
+              <dt>${tr("marketPriced")}</dt>
               <dd>${pricedCount > 0 ? formatMoney(totalMarketPriced) : "—"}</dd>
-              <dt>Unrealized P&amp;L (priced positions)</dt>
+              <dt>${tr("unrealPriced")}</dt>
               <dd><span class="${unrealTotalClass}">${pricedCount > 0 ? formatMoney(unrealTotal) : "—"}</span></dd>
             </dl>
             ${note}
@@ -549,13 +711,13 @@
           <table>
             <thead>
               <tr>
-                <th>Symbol</th>
-                <th class="num">Shares</th>
-                <th class="num">Avg cost</th>
-                <th class="num">Cost basis</th>
-                <th class="num">Current price</th>
-                <th class="num">Market value</th>
-                <th class="num">Unrealized P&amp;L</th>
+                <th>${tr("thSymbol")}</th>
+                <th class="num">${tr("thShares")}</th>
+                <th class="num">${tr("thAvg")}</th>
+                <th class="num">${tr("thCost")}</th>
+                <th class="num">${tr("thCur")}</th>
+                <th class="num">${tr("thMarket")}</th>
+                <th class="num">${tr("thUnreal")}</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -578,7 +740,7 @@
         const el = document.getElementById("holdings-container");
         const holdings = computeHoldings();
         if (holdings.size === 0) {
-          el.innerHTML = '<p class="empty">No open positions. Add buy trades to see holdings.</p>';
+          el.innerHTML = `<p class="empty">${tr("emptyPositions")}</p>`;
           return;
         }
         const rows = [...holdings.entries()]
@@ -590,7 +752,7 @@
           .join("");
         el.innerHTML = `
           <table>
-            <thead><tr><th>Symbol</th><th class="num">Shares</th><th class="num">Avg cost</th><th class="num">Cost basis</th></tr></thead>
+            <thead><tr><th>${tr("thSymbol")}</th><th class="num">${tr("thShares")}</th><th class="num">${tr("thAvg")}</th><th class="num">${tr("thCost")}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>`;
       }
@@ -626,22 +788,22 @@
         const list = filterList(sortedTransactions());
         if (list.length === 0) {
           el.innerHTML =
-            '<p class="empty">No transactions match the filters (or the list is empty).</p>';
+            `<p class="empty">${tr("emptyTx")}</p>`;
           return;
         }
         const rows = list
-          .map((t) => {
-            const sideClass = t.side === "buy" ? "tag-buy" : "tag-sell";
-            const sideLabel = t.side === "buy" ? "Buy" : "Sell";
+          .map((tx) => {
+            const sideClass = tx.side === "buy" ? "tag-buy" : "tag-sell";
+            const sideLabel = tx.side === "buy" ? tr("buy") : tr("sell");
             return `<tr>
-              <td>${escapeHtml(t.date)}</td>
+              <td>${escapeHtml(tx.date)}</td>
               <td><span class="${sideClass}">${sideLabel}</span></td>
-              <td><strong>${escapeHtml(normalizeSymbol(t.symbol))}</strong></td>
-              <td class="num">${formatShares(Number(t.quantity))}</td>
-              <td class="num">${formatMoney(Number(t.pricePerShare))}</td>
-              <td class="num">${formatMoney(Number(t.fees) || 0)}</td>
-              <td>${escapeHtml(t.account || "—")}</td>
-              <td><button type="button" class="secondary edit-transaction" data-edit-id="${escapeHtml(t.id)}">Edit</button></td>
+              <td><strong>${escapeHtml(normalizeSymbol(tx.symbol))}</strong></td>
+              <td class="num">${formatShares(Number(tx.quantity))}</td>
+              <td class="num">${formatMoney(Number(tx.pricePerShare))}</td>
+              <td class="num">${formatMoney(Number(tx.fees) || 0)}</td>
+              <td>${escapeHtml(tx.account || "—")}</td>
+              <td><button type="button" class="secondary edit-transaction" data-edit-id="${escapeHtml(tx.id)}">${tr("edit")}</button></td>
             </tr>`;
           })
           .join("");
@@ -649,8 +811,8 @@
           <table>
             <thead>
               <tr>
-                <th>Date</th><th>Side</th><th>Symbol</th>
-                <th class="num">Qty</th><th class="num">Price</th><th class="num">Fees</th><th>Account</th><th>Actions</th>
+                <th>${tr("thDate")}</th><th>${tr("thSide")}</th><th>${tr("thSymbol")}</th>
+                <th class="num">${tr("thQty")}</th><th class="num">${tr("thPrice")}</th><th class="num">${tr("thFees")}</th><th>${tr("thAccount")}</th><th>${tr("thActions")}</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -705,28 +867,28 @@
           : "";
       }
 
-      function validateTransaction(t) {
-        if (!t || typeof t !== "object") return "Invalid transaction object";
-        if (t.side !== "buy" && t.side !== "sell") return "side must be buy or sell";
-        if (!normalizeSymbol(t.symbol)) return "symbol required";
-        const q = Number(t.quantity);
-        if (!Number.isFinite(q) || q <= 0) return "quantity must be a positive number";
-        const p = Number(t.pricePerShare);
-        if (!Number.isFinite(p) || p < 0) return "pricePerShare must be a non-negative number";
-        const fees = Number(t.fees);
-        if (t.fees != null && (!Number.isFinite(fees) || fees < 0)) return "fees must be non-negative";
-        if (typeof t.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(t.date)) return "date must be YYYY-MM-DD";
+      function validateTransaction(tx) {
+        if (!tx || typeof tx !== "object") return tr("errInvalid");
+        if (tx.side !== "buy" && tx.side !== "sell") return tr("errSide");
+        if (!normalizeSymbol(tx.symbol)) return tr("errSymbol");
+        const q = Number(tx.quantity);
+        if (!Number.isFinite(q) || q <= 0) return tr("errQty");
+        const p = Number(tx.pricePerShare);
+        if (!Number.isFinite(p) || p < 0) return tr("errPps");
+        const fees = Number(tx.fees);
+        if (tx.fees != null && (!Number.isFinite(fees) || fees < 0)) return tr("errFees");
+        if (typeof tx.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) return tr("errDate");
         return null;
       }
 
       function importPayload(data) {
-        if (!data || typeof data !== "object") throw new Error("Root must be a JSON object.");
+        if (!data || typeof data !== "object") throw new Error(tr("errRoot"));
         const txs = data.transactions;
-        if (!Array.isArray(txs)) throw new Error('Missing "transactions" array.');
+        if (!Array.isArray(txs)) throw new Error(tr("errTxArray"));
         const next = [];
         for (let i = 0; i < txs.length; i++) {
           const err = validateTransaction(txs[i]);
-          if (err) throw new Error(`Transaction ${i + 1}: ${err}`);
+          if (err) throw new Error((currentLang === "zh" ? `${tr("errTxPrefix")} ${i + 1} 筆交易：${err}` : `${tr("errTxPrefix")} ${i + 1}: ${err}`));
           next.push({
             id: typeof txs[i].id === "string" ? txs[i].id : uid(),
             side: txs[i].side,
@@ -776,7 +938,7 @@
           const held = computeHoldingsFromList(baseList).get(symbol)?.shares ?? 0;
           if (quantity > held + 1e-9) {
             alert(
-              `Cannot sell ${quantity} shares of ${symbol}: only ${formatShares(held)} shares are held (average-cost view).`
+              `${tr("errCannotSell")} ${quantity} ${currentLang === "zh" ? "股" : "shares"} ${symbol}：${tr("errOnlyHeld")} ${formatShares(held)} ${tr("errHeldSuffix")}`
             );
             return;
           }
@@ -785,7 +947,7 @@
         if (editId) {
           const idx = transactions.findIndex((x) => x.id === editId);
           if (idx < 0) {
-            alert('The transaction being edited no longer exists.');
+            alert(tr("errEditGone"));
             setEditMode(null);
             return;
           }
@@ -844,12 +1006,33 @@
         ta.value = exportText();
       }
 
+      function initTabs() {
+        const buttons = Array.from(document.querySelectorAll("[data-tab-btn]"));
+        const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+        function setActive(tabId) {
+          buttons.forEach((btn) => {
+            const active = btn.getAttribute("data-tab-btn") === tabId;
+            btn.classList.toggle("active", active);
+            btn.setAttribute("aria-selected", active ? "true" : "false");
+          });
+          panels.forEach((panel) => {
+            const active = panel.getAttribute("data-tab-panel") === tabId;
+            panel.classList.toggle("active", active);
+          });
+        }
+        buttons.forEach((btn) => {
+          btn.addEventListener("click", function () {
+            setActive(btn.getAttribute("data-tab-btn"));
+          });
+        });
+      }
+
       async function copyExportPreviewToClipboard() {
         const ta = document.getElementById("export-preview");
         if (!ta) return;
         const text = ta.value || "";
         if (!text) {
-          showIoMessage("Copy failed. Please select the text and copy manually.", false);
+          showIoMessage(tr("msgCopyFail"), false);
           return;
         }
         try {
@@ -861,11 +1044,11 @@
             const ok = document.execCommand("copy");
             if (!ok) throw new Error("copy failed");
           }
-          showIoMessage("Copied JSON to clipboard.", true);
+          showIoMessage(tr("msgCopied"), true);
         } catch (_) {
           ta.focus();
           ta.select();
-          showIoMessage("Copy failed. Please select the text and copy manually.", false);
+          showIoMessage(tr("msgCopyFail"), false);
         }
       }
 
@@ -873,7 +1056,7 @@
         const text = exportText();
         const stamp = new Date().toISOString().slice(0, 10);
         downloadBlob(`stock-transactions-${stamp}.json`, text, "application/json;charset=utf-8");
-        showIoMessage("Export downloaded.", true);
+        showIoMessage(tr("msgExport"), true);
       });
 
       document.getElementById("copy-export-preview").addEventListener("click", function () {
@@ -884,30 +1067,36 @@
         const text = exportText();
         const stamp = new Date().toISOString().slice(0, 10);
         downloadBlob(`stock-transactions-${stamp}.txt`, text, "text/plain;charset=utf-8");
-        showIoMessage("Export downloaded as .txt (same JSON content).", true);
+        showIoMessage(tr("msgExportTxt"), true);
       });
 
       document.getElementById("import-btn").addEventListener("click", function () {
         const raw = document.getElementById("import-text").value.trim();
         showIoMessage("");
         if (!raw) {
-          showIoMessage("Paste JSON first.", false);
+          showIoMessage(tr("msgPasteFirst"), false);
           return;
         }
-        if (!confirm("Replace all current transactions with imported data?")) return;
+        if (!confirm(tr("confirmReplace"))) return;
         try {
           const data = JSON.parse(raw);
           importPayload(data);
-          showIoMessage(`Imported ${transactions.length} transaction(s).`, true);
+          showIoMessage(currentLang === "zh" ? `${tr("msgImported")} ${transactions.length} 筆交易。` : `${tr("msgImported")} ${transactions.length} transaction(s).`, true);
         } catch (err) {
           showIoMessage(err.message || String(err), false);
         }
       });
 
+      document.getElementById("lang-toggle").addEventListener("click", function () {
+        currentLang = currentLang === "en" ? "zh" : "en";
+        applyLanguage();
+        renderAll();
+      });
       setEditMode(null);
+      initTabs();
+      applyLanguage();
       renderAll();
     })();
   </script>
 </body>
 </html>
-
