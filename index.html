@@ -999,6 +999,17 @@
         ta.value = exportText();
       }
 
+      function fileTimestamp() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const h = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        const s = String(d.getSeconds()).padStart(2, "0");
+        return `${y}-${m}-${day}_${h}${min}${s}`;
+      }
+
       function initTabs() {
         const buttons = Array.from(document.querySelectorAll("[data-tab-btn]"));
         const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
@@ -1048,7 +1059,7 @@
 
       document.getElementById("export-json").addEventListener("click", function () {
         const text = exportText();
-        const stamp = new Date().toISOString().slice(0, 10);
+        const stamp = fileTimestamp();
         downloadBlob(`stock-transactions-${stamp}.json`, text, "application/json;charset=utf-8");
         showIoMessage(tr("msgExport"), true);
       });
@@ -1059,7 +1070,7 @@
 
       document.getElementById("export-txt").addEventListener("click", function () {
         const text = exportText();
-        const stamp = new Date().toISOString().slice(0, 10);
+        const stamp = fileTimestamp();
         downloadBlob(`stock-transactions-${stamp}.txt`, text, "text/plain;charset=utf-8");
         showIoMessage(tr("msgExportTxt"), true);
       });
