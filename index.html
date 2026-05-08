@@ -190,6 +190,9 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
     .tab-btn {
       background: transparent;
@@ -211,23 +214,15 @@
   </style>
 </head>
 <body>
-  <header>
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;">
-      <div>
-        <h1 id="header-title">Stock transactions</h1>
-        <p id="header-subtitle">Prototype — data lives in this page until you export it. Use import to restore a previous session.</p>
-      </div>
-      <button type="button" id="lang-toggle" class="secondary" title="Switch language" aria-label="Switch language" style="padding:0.45rem 0.7rem;line-height:1;">🌐</button>
-    </div>
-  </header>
   <main>
     <nav class="tabs-nav" aria-label="Page sections">
-      <button type="button" class="tab-btn active" data-tab-btn="trades" aria-selected="true">Record a trade / Transaction list</button>
       <button type="button" class="tab-btn" data-tab-btn="positions" aria-selected="false">Holdings / Portfolio</button>
-      <button type="button" class="tab-btn" data-tab-btn="data" aria-selected="false">Backup and restore / Live report</button>
+      <button type="button" class="tab-btn" data-tab-btn="trades" aria-selected="false">Record a trade / Transaction list</button>
+      <button type="button" class="tab-btn active" data-tab-btn="data" aria-selected="true">Backup and restore / Live report</button>
+      <button type="button" id="lang-toggle" class="secondary" title="Switch language" aria-label="Switch language" style="padding:0.45rem 0.7rem;line-height:1;">🌐</button>
     </nav>
 
-    <div class="tab-panel active" data-tab-panel="trades">
+    <div class="tab-panel" data-tab-panel="trades">
           <section aria-labelledby="add-title">
       <h2 id="add-title">Record a trade</h2>
       <form id="trade-form" class="grid">
@@ -317,7 +312,7 @@
     </section>
     </div>
 
-    <div class="tab-panel" data-tab-panel="data">
+    <div class="tab-panel active" data-tab-panel="data">
           <section aria-labelledby="io-title">
       <h2 id="io-title">Backup &amp; restore</h2>
       <p id="io-help" style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
@@ -427,8 +422,6 @@
       function applyLanguage() {
         document.documentElement.lang = currentLang === "zh" ? "zh-Hant" : "en";
         document.title = currentLang === "zh" ? "股票交易紀錄 — 原型" : "Stock Transactions — Prototype";
-        document.getElementById("header-title").textContent = tr("title");
-        document.getElementById("header-subtitle").textContent = tr("subtitle");
         document.getElementById("lang-toggle").title = tr("switchLang");
         document.getElementById("lang-toggle").setAttribute("aria-label", tr("switchLang"));
         document.querySelector('[data-tab-btn="trades"]').textContent = tr("tabTrades");
@@ -1025,6 +1018,7 @@
             setActive(btn.getAttribute("data-tab-btn"));
           });
         });
+        setActive("data");
       }
 
       async function copyExportPreviewToClipboard() {
