@@ -557,10 +557,6 @@
       <p id="io-help" style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
         Export downloads transactions and your entered <strong>current prices</strong> as JSON. Import replaces all in-memory data with the pasted file contents.
       </p>
-      <div class="btn-row" style="margin-bottom: 1rem;">
-        <button type="button" id="export-json">Export as JSON</button>
-        <button type="button" id="export-txt" class="secondary">Export as TXT</button>
-      </div>
       <label for="import-text">Paste exported JSON here</label>
       <textarea id="import-text" placeholder='{"version":1,"transactions":[...]}'></textarea>
       <div class="btn-row">
@@ -574,6 +570,10 @@
       <p id="export-help" style="margin: 0 0 0.75rem; font-size: 0.875rem; color: var(--muted);">
         Same data as <strong>Export as JSON</strong> — updates when you change trades or portfolio prices. Select all and copy to save without downloading a file.
       </p>
+      <div class="btn-row" style="margin-bottom: 1rem;">
+        <button type="button" id="export-json">Export as JSON</button>
+        <button type="button" id="export-txt" class="secondary">Export as TXT</button>
+      </div>
       <textarea id="export-preview" readonly spellcheck="false" aria-label="Current export JSON for copying"></textarea>
       <div class="btn-row">
         <button type="button" id="copy-export-preview" class="secondary">Copy JSON</button>
@@ -585,12 +585,15 @@
   <script>
     (function () {
       const STORAGE_VERSION = 2;
+      const LOCAL_STORAGE_KEY = "cap-book.app.v1";
 
       /** @type {{ id: string, side: 'buy'|'sell', symbol: string, quantity: number, pricePerShare: number, fees: number, date: string, account: string }} */
       let transactions = [];
 
       /** User-entered last price per symbol (string from inputs; normalized keys). */
       let currentPrices = {};
+
+      let persistQuoteSaveTimer = null;
 
 
       let currentLang = "en";
@@ -605,7 +608,7 @@
           addBtn: "Add transaction", updateBtn: "Update transaction", cancelEdit: "Cancel edit", editing: "Editing transaction",
           filterSymbol: "Symbol", filterSide: "Side", from: "From", to: "To", all: "All", clear: "Clear filters",
           portfolioHelp: "Enter today’s price per share for each holding. Market value and unrealized P&L update from your inputs (not live quotes).",
-          ioHelp: "Export downloads transactions and your entered <strong>current prices</strong> as JSON. Import replaces all in-memory data with the pasted file contents.",
+          ioHelp: "Export downloads transactions and your entered <strong>current prices</strong> as JSON. Import replaces all in-memory data with the pasted file contents. This page also <strong>auto-saves</strong> the same data in your browser; clearing site data for this page removes it.",
           exportJson: "Export as JSON", exportTxt: "Export as TXT", importLabel: "Paste exported JSON here", importBtn: "Import (replace all data)",
           reportHelp: "Same data as <strong>Export as JSON</strong> — updates when you change trades or portfolio prices. Select all and copy to save without downloading a file.",
           copyJson: "Copy JSON", switchLang: "Switch language",
@@ -624,6 +627,7 @@
           errEditGone: "The transaction being edited no longer exists.",
           msgCopyFail: "Copy failed. Please select the text and copy manually.", msgCopied: "Copied JSON to clipboard.",
           msgExport: "Export downloaded.", msgExportTxt: "Export downloaded as .txt (same JSON content).", msgPasteFirst: "Paste JSON first.",
+          msgLocalSaveQuota: "Could not save to browser storage (quota exceeded). Export your data to keep a backup.",
           confirmReplace: "Replace all current transactions with imported data?", msgImported: "Imported"
         },
         zh: {
@@ -636,7 +640,7 @@
           addBtn: "新增交易", updateBtn: "更新交易", cancelEdit: "取消編輯", editing: "編輯中",
           filterSymbol: "代號", filterSide: "買賣別", from: "起日", to: "迄日", all: "全部", clear: "清除篩選",
           portfolioHelp: "請為每檔持股輸入目前每股價格。市值與未實現損益將依您的輸入計算（非即時行情）。",
-          ioHelp: "匯出會將交易紀錄與您輸入的<strong>目前股價</strong>下載為 JSON。匯入會以貼上的內容<strong>完全取代</strong>目前頁面中的資料。",
+          ioHelp: "匯出會將交易紀錄與您輸入的<strong>目前股價</strong>下載為 JSON。匯入會以貼上的內容<strong>完全取代</strong>目前頁面中的資料。此頁面亦會將相同資料<strong>自動儲存</strong>於瀏覽器；若清除此網站的資料，儲存內容會一併移除。",
           exportJson: "匯出為 JSON", exportTxt: "匯出為 TXT", importLabel: "將匯出的 JSON 貼在下方", importBtn: "匯入（取代全部資料）",
           reportHelp: "內容與<strong>匯出為 JSON</strong>相同，會在您變更交易或投組股價時自動更新。可全選後複製，無須下載檔案。",
           copyJson: "複製 JSON", switchLang: "切換語言",
@@ -655,6 +659,7 @@
           errEditGone: "要編輯的交易已不存在。",
           msgCopyFail: "複製失敗，請手動全選後複製。", msgCopied: "已將 JSON 複製到剪貼簿。",
           msgExport: "已下載匯出檔案。", msgExportTxt: "已下載為 .txt（內容與 JSON 相同）。", msgPasteFirst: "請先貼上 JSON。",
+          msgLocalSaveQuota: "無法寫入瀏覽器儲存空間（已超出配額）。請匯出資料以備份。",
           confirmReplace: "確定要以匯入資料取代目前所有交易與股價資料？", msgImported: "已匯入"
         }
       };
@@ -1068,6 +1073,7 @@
         renderPortfolio();
         renderTransactions();
         refreshExportPreview();
+        saveAppState();
       }
 
       /** Drop stored prices for symbols you no longer hold (keeps export tidy). */
@@ -1092,6 +1098,75 @@
           transactions: sortedTransactions(),
           currentPrices: pricesOut,
         };
+      }
+
+      function saveAppState() {
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serializeApp()));
+        } catch (e) {
+          const name = e && e.name;
+          if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") {
+            showIoMessage(tr("msgLocalSaveQuota"), false);
+          }
+        }
+      }
+
+      /**
+       * Replace in-memory app state from export-shaped JSON (same rules as import).
+       * Does not render; caller should call renderAll when appropriate.
+       */
+      function applyAppPayload(data) {
+        if (!data || typeof data !== "object") throw new Error(tr("errRoot"));
+        const txs = data.transactions;
+        if (!Array.isArray(txs)) throw new Error(tr("errTxArray"));
+        const next = [];
+        for (let i = 0; i < txs.length; i++) {
+          const err = validateTransaction(txs[i]);
+          if (err) throw new Error((currentLang === "zh" ? `${tr("errTxPrefix")} ${i + 1} 筆交易：${err}` : `${tr("errTxPrefix")} ${i + 1}: ${err}`));
+          next.push({
+            id: typeof txs[i].id === "string" ? txs[i].id : uid(),
+            side: txs[i].side,
+            symbol: normalizeSymbol(txs[i].symbol),
+            quantity: Number(txs[i].quantity),
+            pricePerShare: Number(txs[i].pricePerShare),
+            fees: Number(txs[i].fees) || 0,
+            date: txs[i].date,
+            account: txs[i].account != null ? String(txs[i].account) : "",
+          });
+        }
+        const seqErr = ledgerErrorIfInvalid(next);
+        if (seqErr) throw new Error(seqErr);
+        transactions = next;
+        if (data.currentPrices && typeof data.currentPrices === "object") {
+          currentPrices = {};
+          for (const [k, v] of Object.entries(data.currentPrices)) {
+            const sym = normalizeSymbol(k);
+            if (!sym) continue;
+            if (v != null && String(v).trim() !== "") currentPrices[sym] = String(v).trim();
+          }
+        } else {
+          currentPrices = {};
+        }
+      }
+
+      function loadAppState() {
+        try {
+          const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (raw == null || raw === "") return;
+          applyAppPayload(JSON.parse(raw));
+        } catch (_) {
+          try {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+          } catch (__) {}
+        }
+      }
+
+      function scheduleSaveFromQuoteEdit() {
+        if (persistQuoteSaveTimer) clearTimeout(persistQuoteSaveTimer);
+        persistQuoteSaveTimer = setTimeout(function () {
+          persistQuoteSaveTimer = null;
+          saveAppState();
+        }, 300);
       }
 
       function downloadBlob(filename, text, mime) {
@@ -1125,37 +1200,7 @@
       }
 
       function importPayload(data) {
-        if (!data || typeof data !== "object") throw new Error(tr("errRoot"));
-        const txs = data.transactions;
-        if (!Array.isArray(txs)) throw new Error(tr("errTxArray"));
-        const next = [];
-        for (let i = 0; i < txs.length; i++) {
-          const err = validateTransaction(txs[i]);
-          if (err) throw new Error((currentLang === "zh" ? `${tr("errTxPrefix")} ${i + 1} 筆交易：${err}` : `${tr("errTxPrefix")} ${i + 1}: ${err}`));
-          next.push({
-            id: typeof txs[i].id === "string" ? txs[i].id : uid(),
-            side: txs[i].side,
-            symbol: normalizeSymbol(txs[i].symbol),
-            quantity: Number(txs[i].quantity),
-            pricePerShare: Number(txs[i].pricePerShare),
-            fees: Number(txs[i].fees) || 0,
-            date: txs[i].date,
-            account: txs[i].account != null ? String(txs[i].account) : "",
-          });
-        }
-        const seqErr = ledgerErrorIfInvalid(next);
-        if (seqErr) throw new Error(seqErr);
-        transactions = next;
-        if (data.currentPrices && typeof data.currentPrices === "object") {
-          currentPrices = {};
-          for (const [k, v] of Object.entries(data.currentPrices)) {
-            const sym = normalizeSymbol(k);
-            if (!sym) continue;
-            if (v != null && String(v).trim() !== "") currentPrices[sym] = String(v).trim();
-          }
-        } else {
-          currentPrices = {};
-        }
+        applyAppPayload(data);
         renderAll();
       }
 
@@ -1237,6 +1282,7 @@
         else currentPrices[sym] = inp.value;
         renderPortfolio();
         refreshExportPreview();
+        scheduleSaveFromQuoteEdit();
       });
 
       function exportText() {
@@ -1347,6 +1393,7 @@
         applyLanguage();
         renderAll();
       });
+      loadAppState();
       setEditMode(null);
       initTabs();
       applyLanguage();
