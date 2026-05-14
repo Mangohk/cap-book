@@ -443,7 +443,7 @@
 <body>
   <main>
     <nav class="tabs-nav" aria-label="Page sections">
-      <button type="button" class="tab-btn" data-tab-btn="positions" aria-selected="false">
+      <button type="button" class="tab-btn active" data-tab-btn="positions" aria-selected="true">
         <span class="tab-icon" aria-hidden="true">💼</span>
         <span class="tab-label-long">Holdings / Portfolio</span>
         <span class="tab-label-short">Holdings</span>
@@ -453,7 +453,7 @@
         <span class="tab-label-long">Record a trade / Transaction list</span>
         <span class="tab-label-short">Trade</span>
       </button>
-      <button type="button" class="tab-btn active" data-tab-btn="data" aria-selected="true">
+      <button type="button" class="tab-btn" data-tab-btn="data" aria-selected="false">
         <span class="tab-icon" aria-hidden="true">💾</span>
         <span class="tab-label-long">Backup and restore / Live report</span>
         <span class="tab-label-short">Backup</span>
@@ -536,7 +536,7 @@
     </section>
     </div>
 
-    <div class="tab-panel" data-tab-panel="positions">
+    <div class="tab-panel active" data-tab-panel="positions">
           <section aria-labelledby="holdings-title">
       <h2 id="holdings-title">Holdings</h2>
       <div id="holdings-container"></div>
@@ -551,7 +551,7 @@
     </section>
     </div>
 
-    <div class="tab-panel active" data-tab-panel="data">
+    <div class="tab-panel" data-tab-panel="data">
           <section aria-labelledby="io-title">
       <h2 id="io-title">Backup &amp; restore</h2>
       <p id="io-help" style="margin: 0 0 1rem; font-size: 0.875rem; color: var(--muted);">
@@ -1325,7 +1325,7 @@
             setActive(btn.getAttribute("data-tab-btn"));
           });
         });
-        setActive("data");
+        setActive("positions");
       }
 
       async function copyExportPreviewToClipboard() {
